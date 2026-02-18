@@ -309,12 +309,9 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
 </div>
 
 <script>
-
-let authToken = null;
-let employeeActivities = [];
-let programRules = {};
-let globalMessages = [];
-let currentEmployeeName = null;
+const API_URL = "PASTE_YOUR_LOGIC_APP_HTTP_TRIGGER_URL_HERE";
+let currentUser = null;
+let rawData = [];
 let currentWeekStart = getStartOfWeek(new Date());
 
 // ===== Program Fixed Colors =====
@@ -393,18 +390,6 @@ function formatTime(t){
   return value;
 }
 
-async function fetchSchedule(){
-  const res = await fetch('/api/me/schedule', {
-    headers: { Authorization: `Bearer ${authToken}` }
-  });
-  if(!res.ok) throw new Error('Failed to load schedule');
-  const payload = await res.json();
-  currentEmployeeName = payload.employeeName;
-  employeeActivities = payload.activities || [];
-  programRules = payload.programRules || {};
-  globalMessages = payload.globalMessages || [];
-}
-
 function noteHtml(note){
   const styles = {
     'Reminder': { bg:'#fff8e1', border:'#f59e0b', color:'#7c5c00', label:'תזכורת' },
@@ -416,42 +401,58 @@ function noteHtml(note){
 }
 
 async function login(){
-  const btn = document.getElementById("loginBtn");
-  const card = document.querySelector('.login-card');
   const empID = document.getElementById("empID").value.trim();
   const code = document.getElementById("code").value.trim();
 
   if(!empID || !code) return;
 
-  btn.classList.add('pressed','loading');
-  btn.innerText = "טוען...";
-
-  const loginRes = await fetch('/api/login', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ employeeId: empID, code })
+  const response = await fetch(API_URL,{ 
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      action:"auth",
+      employeeId: empID,
+      personalCode: code
+    })
   });
 
-  if(!loginRes.ok){
-    btn.classList.remove('pressed','loading');
-    btn.innerText = "כניסה";
-    card.classList.add('shake');
-    setTimeout(()=>card.classList.remove('shake'),400);
+  const result = await response.json();
+
+  if(!result.success){
+    alert("מספר עובד או קוד אישי שגויים");
     return;
   }
 
-  const payload = await loginRes.json();
-  authToken = payload.token;
-  await fetchSchedule();
+  currentUser = result.employee;
 
-  document.getElementById("greeting").innerText = "שלום " + currentEmployeeName;
+  document.getElementById("greeting").innerText =
+    "שלום " + currentUser.employeeName;
 
-  document.getElementById("loginSection").style.display = "none";
-  document.getElementById("appSection").style.display = "block";
+  document.getElementById("loginSection").style.display="none";
+  document.getElementById("appSection").style.display="block";
 
-  btn.classList.remove('pressed','loading');
-  btn.innerText = "כניסה";
+  await loadCalendar();
+}
 
+async function loadCalendar(){
+
+  const response = await fetch(API_URL,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      action:"getcalendar",
+      personalCode: document.getElementById("code").value.trim()
+    })
+  });
+
+  const result = await response.json();
+
+  if(!result.success){
+    alert("שגיאה בטעינת יומן");
+    return;
+  }
+
+  rawData = result.records;
   renderWeek();
 }
 
@@ -489,30 +490,31 @@ function renderWeek(){
       ${holidayName ? `<div style="margin-top:6px;font-size:12px;font-weight:700;color:#b45309">${holidayName}</div>` : ''}
     `;
 
-    // Collect activities for this day
-    const activities = [];
-    employeeActivities.forEach(activity=>{
-      const activityDate = new Date(activity.date);
-      if(activityDate.toDateString() === dayDate.toDateString()){
-        activities.push({
-          Program: activity.program,
-          ProgramKey: activity.programKey,
-          StartTime: activity.startTime,
-          EndTime: activity.endTime,
-          Manager: activity.manager,
-          School: activity.school,
-          Class: activity.className,
-          Authority: activity.authority,
-          MeetingNumber: activity.meetingNumber
-        });
-      }
-    });
+    // Collect activities for this day (directly from server rows)
+    const activities = rawData.filter(row => {
+      const startDate = row.startDate ? new Date(row.startDate) : null;
+      const endDate = row.endDate ? new Date(row.endDate) : startDate;
+      if(!startDate) return false;
+      startDate.setHours(0,0,0,0);
+      if(endDate) endDate.setHours(23,59,59,999);
+      const target = new Date(dayDate);
+      target.setHours(12,0,0,0);
+      return target >= startDate && target <= endDate;
+    }).map(row => ({
+      Program: row.courseName || '',
+      StartTime: row.startDate || '',
+      EndTime: row.endDate || '',
+      School: row.schoolName || '',
+      Authority: row.municipality || '',
+      MeetingNumber: row.sessionNumber || '',
+      Notes: row.notes || ''
+    }));
 
     activities.forEach(act=>{
       const item = document.createElement('div');
       item.className='activity';
       item.style.background = getProgramColor(act.Program);
-      item.innerText = act.Program + " " + formatTime(act.StartTime) + "-" + formatTime(act.EndTime);
+      item.innerText = `${act.Program} | מפגש ${act.MeetingNumber || '-'}`;
       div.appendChild(item);
     });
 
@@ -527,27 +529,20 @@ function openPopup(date, activities){
 
   let html = `<h3 style="margin-top:0">${date.toLocaleDateString('he-IL')}</h3>`;
 
-  if(globalMessages.length > 0){
-    globalMessages.forEach(gm => { html += noteHtml({ type: gm.type, text: gm.message }); });
-    html += '<hr style="margin:14px 0;border:none;border-top:1px solid #e6e8ef">';
-  }
-
   if(activities.length === 0){
     html += "<p>אין פעילות מתוכננת</p>";
   } else {
     activities.forEach(act=>{
       const color = getProgramColor(act.Program);
-      const notes = (programRules[normalizeProgramName(act.Program)] && programRules[normalizeProgramName(act.Program)][act.MeetingNumber]) || [];
-      const notesHtml = notes.map(n => noteHtml(n)).join('');
       html += `
         <div style="border:1px solid #e6e8ef;border-radius:16px;padding:14px;margin-bottom:14px;background:${color}">
           <div style="font-weight:700;margin-bottom:8px">${act.Program}</div>
           <div><strong>בית ספר:</strong> ${act.School}</div>
           <div><strong>רשות:</strong> ${act.Authority || ''}</div>
-          <div><strong>כיתה:</strong> ${act.Class || ''}</div>
-          <div><strong>שעות:</strong> ${formatTime(act.StartTime)} - ${formatTime(act.EndTime)}</div>
+          <div><strong>תאריך התחלה:</strong> ${new Date(act.StartTime).toLocaleDateString('he-IL')}</div>
+          <div><strong>תאריך סיום:</strong> ${new Date(act.EndTime).toLocaleDateString('he-IL')}</div>
           <div><strong>מספר מפגש:</strong> ${act.MeetingNumber}</div>
-          ${notesHtml}
+          ${act.Notes ? noteHtml({ type: 'Info', text: act.Notes }) : ''}
         </div>
       `;
     });
