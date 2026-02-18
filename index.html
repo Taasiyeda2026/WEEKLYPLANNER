@@ -40,7 +40,7 @@ header{
 
 header img{height:48px;margin-bottom:8px}
 
-h1{margin:0;font-size:22px;font-weight:700}
+h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
 
 .login-wrapper{
   min-height:80vh;
@@ -89,10 +89,11 @@ h1{margin:0;font-size:22px;font-weight:700}
 
 .greeting{
   text-align:center;
-  font-weight:700;
-  padding:18px;
-  font-size:18px;
+  font-weight:800;
+  padding:22px;
+  font-size:26px;
   color:var(--primary);
+  letter-spacing:0.3px;
 }
 
 .week-nav{
@@ -115,6 +116,22 @@ h1{margin:0;font-size:22px;font-weight:700}
   border:1px solid var(--border);
   background:#fff;
   cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  transition:all 0.2s ease;
+  box-shadow:0 6px 14px rgba(0,0,0,0.08);
+}
+
+.nav-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(0,0,0,0.12);
+}
+
+.nav-btn:active{
+  transform:translateY(1px) scale(0.96);
+  box-shadow:0 3px 8px rgba(0,0,0,0.15) inset;
 }
 
 .week-title{
@@ -207,7 +224,26 @@ h1{margin:0;font-size:22px;font-weight:700}
 }
 
 @media(max-width:600px){
-  .calendar-grid{grid-template-columns:1fr}
+  .calendar{
+    padding:24px 20px 40px 20px;
+  }
+
+  .calendar-grid{
+    grid-template-columns:1fr;
+    max-width:420px;
+    margin:0 auto;
+    gap:20px;
+  }
+
+  .week-nav{
+    margin:0 24px 14px 24px;
+  }
+
+  .day{
+    min-height:160px;
+    padding:20px;
+  }
+}
 }
 
 </style>
@@ -263,45 +299,7 @@ const programColors = {
   "Premium": "#FEF9E7"
 };
 let rawData = [];
-let programRules = {}; // Program -> { meetingNumber: "Reminder text" }
-let currentEmployeeName = "";
-let currentWeekStart = getStartOfWeek(new Date());
-
-function getStartOfWeek(date){
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day;
-  d.setDate(diff);
-  d.setHours(0,0,0,0);
-  return d;
-}
-
-async function login(){
-  const empNumber = document.getElementById('empID').value;
-  await loadExcel();
-
-  const employeeRows = rawData.filter(r => String(r["EmployeeID"]) === empNumber);
-  if(employeeRows.length === 0){
-    alert("מספר עובד לא נמצא");
-    return;
-  }
-
-  currentEmployeeName = employeeRows[0]["Employee"];
-  document.getElementById('greeting').innerText = "שלום " + currentEmployeeName;
-  document.getElementById('loginSection').style.display='none';
-  document.getElementById('appSection').style.display='block';
-  renderWeek();
-}
-
-async function loadExcel(){
-  const res = await fetch(EXCEL_FILE + "?t=" + Date.now());
-  const data = await res.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "array" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  rawData = XLSX.utils.sheet_to_json(sheet);
-
-  // Example hardcoded rules (can be replaced by ProgramRules.xlsx later)
-  programRules = {
+let programRules = {
     "Biomimicry": {
       7: "מפגש 7 – לוודא היערכות למפגש הבא (ציוד ודגם AI/פיזי)"
     },
@@ -309,6 +307,35 @@ async function loadExcel(){
       7: "מפגש 7 – בדיקת סטטוס הכנת דגמים"
     }
   };
+}
+
+// ===== Holidays Layer =====
+const holidays = {
+  "03/03/2026": "פורים",
+  "04/03/2026": "פורים",
+  "24/03/2026": "פסח",
+  "25/03/2026": "פסח",
+  "26/03/2026": "פסח",
+  "27/03/2026": "פסח",
+  "28/03/2026": "פסח",
+  "29/03/2026": "פסח",
+  "30/03/2026": "פסח",
+  "31/03/2026": "פסח",
+  "01/04/2026": "פסח",
+  "02/04/2026": "פסח",
+  "03/04/2026": "פסח",
+  "04/04/2026": "פסח",
+  "05/04/2026": "פסח",
+  "06/04/2026": "פסח",
+  "07/04/2026": "פסח",
+  "08/04/2026": "פסח",
+  "20/04/2026": "ערב יום הזיכרון",
+  "21/04/2026": "יום הזיכרון",
+  "22/04/2026": "יום העצמאות",
+  "08/05/2026": "ל״ג בעומר",
+  "21/05/2026": "שבועות",
+  "22/05/2026": "שבועות"
+};
 }
 
 function renderWeek(){
@@ -331,9 +358,18 @@ function renderWeek(){
     div.className='day';
     if(dayDate.toDateString()===today.toDateString()) div.classList.add('today');
 
+    const dateKey = dayDate.toLocaleDateString('en-GB');
+    const holidayName = holidays[dateKey];
+
+    if(holidayName){
+      div.style.background = '#fff7ed';
+      div.style.border = '2px solid #f59e0b';
+    }
+
     div.innerHTML = `
       <div class="day-header">${dayDate.toLocaleDateString('he-IL',{weekday:'long'})}</div>
       <div class="day-number">${dayDate.getDate()}</div>
+      ${holidayName ? `<div style="margin-top:6px;font-size:12px;font-weight:700;color:#b45309">${holidayName}</div>` : ''}
     `;
 
     // Collect activities from Date1-Date16 excluding Cancel1-Cancel16
