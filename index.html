@@ -312,6 +312,12 @@ const EXCEL_FILE = "InstructorData.xlsx";
 const PROGRAM_RULES_FILE = "ProgramRules.xlsx";
 const GLOBAL_MESSAGES_FILE = "GlobalMessages.xlsx";
 
+// ===== Power Automate Login URL =====
+// הגדר כאן את ה-URL של ה-Flow שיצרת ב-Power Automate
+// Flow מקבל POST עם { employeeId, code }
+// ומחזיר { valid: true, name: "שם העובד" } או { valid: false }
+const POWER_AUTOMATE_URL = "YOUR_POWER_AUTOMATE_FLOW_URL_HERE";
+
 let rawData = [];
 let programRules = {};
 let globalMessages = [];
@@ -421,20 +427,27 @@ function noteHtml(note){
   return `<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:${s.bg};border-right:3px solid ${s.border};font-size:12px;color:${s.color}"><strong>${s.label}:</strong> ${note.text}</div>`;
 }
 
-function login(){
+async function login(){
   const btn = document.getElementById("loginBtn");
   const card = document.querySelector('.login-card');
+  const empID = document.getElementById("empID").value.trim();
+  const code = document.getElementById("code").value.trim();
+
+  if(!empID || !code) return;
 
   btn.classList.add('pressed','loading');
   btn.innerText = "טוען...";
 
-  setTimeout(()=>{
-    const empID = document.getElementById("empID").value;
-    const code = document.getElementById("code").value;
+  try {
+    const response = await fetch(POWER_AUTOMATE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId: empID, code: code })
+    });
 
-    const match = rawData.find(r => String(r.EmployeeID) === empID && String(r.Code) === code);
+    const result = await response.json();
 
-    if(!match){
+    if(!result.valid){
       btn.classList.remove('pressed','loading');
       btn.innerText = "כניסה";
       card.classList.add('shake');
@@ -442,7 +455,7 @@ function login(){
       return;
     }
 
-    currentEmployeeName = match.Employee;
+    currentEmployeeName = result.name;
     document.getElementById("greeting").innerText = "שלום " + currentEmployeeName;
 
     document.getElementById("loginSection").style.display = "none";
@@ -452,7 +465,14 @@ function login(){
     btn.innerText = "כניסה";
 
     renderWeek();
-  },500);
+
+  } catch(err) {
+    btn.classList.remove('pressed','loading');
+    btn.innerText = "כניסה";
+    card.classList.add('shake');
+    setTimeout(()=>card.classList.remove('shake'),400);
+    console.error("Login error:", err);
+  }
 }
 
 function renderWeek(){
@@ -575,6 +595,8 @@ function prevWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()-7); ren
 function nextWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()+7); renderWeek(); }
 
 window.addEventListener('load', async ()=>{
+  // InstructorData.xlsx ציבורי - מכיל נתוני פעילות בלבד (ללא EmployeeID/Code)
+  // אימות הכניסה מתבצע דרך Power Automate ב-SharePoint הפרטי
   await Promise.all([loadExcel(), loadProgramRules(), loadGlobalMessages()]);
 
   const empInput = document.getElementById('empID');
