@@ -377,10 +377,16 @@ function getStartOfWeek(date){
   return new Date(d.setDate(diff));
 }
 
+function formatTime(t){
+  if(!t) return '';
+  if(t instanceof Date) return t.toTimeString().slice(0,5);
+  return String(t);
+}
+
 async function loadExcel(){
   const res = await fetch(EXCEL_FILE + "?t=" + Date.now());
   const data = await res.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "array" });
+  const workbook = XLSX.read(data, { type: "array", cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   rawData = XLSX.utils.sheet_to_json(sheet, { raw: true });
 }
@@ -528,7 +534,7 @@ function renderWeek(){
       const item = document.createElement('div');
       item.className='activity';
       item.style.background = programColors[act.Program] || '#f1f5ff';
-      item.innerText = act.Program + " " + act.StartTime + "-" + act.EndTime;
+      item.innerText = act.Program + " " + formatTime(act.StartTime) + "-" + formatTime(act.EndTime);
       div.appendChild(item);
     });
 
@@ -561,7 +567,7 @@ function openPopup(date, activities){
           <div><strong>בית ספר:</strong> ${act.School}</div>
           <div><strong>רשות:</strong> ${act.Authority || ''}</div>
           <div><strong>כיתה:</strong> ${act.Class || ''}</div>
-          <div><strong>שעות:</strong> ${act.StartTime} - ${act.EndTime}</div>
+          <div><strong>שעות:</strong> ${formatTime(act.StartTime)} - ${formatTime(act.EndTime)}</div>
           <div><strong>מספר מפגש:</strong> ${act.MeetingNumber}</div>
           ${notesHtml}
         </div>
