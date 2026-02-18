@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>יומן פעילות</title>
 
 <meta name="theme-color" content="#4f46e5">
@@ -16,58 +16,189 @@
 
 <style>
 :root{
-  --bg:#f6f9fc;
-  --border:#e5e7eb;
-  --primary:#4f46e5;
-  --primary-glow:rgba(79,70,229,0.25);
-  --text:#0f172a;
+  --bg:#f3f4f8;
+  --card:#ffffff;
+  --border:#e6e8ef;
+  --primary:#5b4ce2;
+  --text:#1f2937;
+  --muted:#6b7280;
 }
 
 *{box-sizing:border-box}
 body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
 
-header{background:#fff;padding:20px;border-bottom:1px solid var(--border);text-align:center}
+header{
+  background:#fff;
+  padding:24px 16px;
+  text-align:center;
+  border-bottom:1px solid var(--border);
+}
 
-.login-wrapper{display:flex;justify-content:center;padding:40px 16px}
-.login-card{width:100%;max-width:300px;background:#fff;padding:32px;border-radius:20px;border:1px solid var(--border);box-shadow:0 20px 50px rgba(0,0,0,0.05)}
-.login-box{display:flex;flex-direction:column;gap:14px}
+header img{height:48px;margin-bottom:8px}
 
-input{height:60px;padding:0 16px;font-size:16px;border-radius:14px;border:1px solid var(--border);text-align:center}
+h1{margin:0;font-size:22px;font-weight:700}
 
-button{height:40px;border:none;border-radius:999px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer;padding:0 18px;width:120px;align-self:center;font-size:14px;box-shadow:0 6px 14px rgba(79,70,229,0.25)}
-button:active{transform:scale(0.96)}
+.login-wrapper{
+  min-height:80vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
 
-.greeting{padding:16px;text-align:center;font-weight:600}
+.login-card{
+  width:100%;
+  max-width:320px;
+  background:var(--card);
+  padding:36px 28px;
+  border-radius:22px;
+  border:1px solid var(--border);
+  box-shadow:0 25px 60px rgba(0,0,0,0.05);
+}
 
-.week-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid var(--border)}
+.login-box{display:flex;flex-direction:column;gap:16px}
 
-.week-grid{padding:16px;display:flex;overflow-x:auto;gap:16px;scroll-snap-type:x mandatory}
+.login-box input{
+  height:64px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  text-align:center;
+  font-size:16px;
+  font-weight:600;
+  background:#fafbff;
+}
 
-.day{min-width:260px;background:#fff;padding:16px;border-radius:18px;border:1px solid var(--border);scroll-snap-align:center;transition:0.2s}
+.login-box button{
+  height:36px;
+  width:120px;
+  align-self:center;
+  border-radius:999px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+  font-size:13px;
+  cursor:pointer;
+}
 
-.today{border:2px solid var(--primary);box-shadow:0 0 0 4px var(--primary-glow)}
+.greeting{
+  text-align:center;
+  font-weight:600;
+  padding:18px;
+}
 
-.event-card{margin-top:12px;padding:10px;border-radius:12px;font-size:13px;cursor:pointer;display:inline-block;max-width:200px;border:1px solid var(--border);transition:0.2s}
-.event-card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,0.08)}
+.week-nav{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+  padding:14px;
+}
 
-.global-fixed-banner{background:#dc2626;color:#fff;padding:16px;text-align:center;font-weight:600}
-.global-fixed-banner a{display:inline-block;margin-top:10px;background:#fff;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none}
+.nav-btn{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:#fff;
+  cursor:pointer;
+}
+
+.week-title{
+  font-weight:600;
+}
+
+.calendar{
+  padding:20px;
+  max-width:1200px;
+  margin:auto;
+}
+
+.calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:16px;
+}
+
+.day{
+  background:var(--card);
+  border-radius:20px;
+  border:1px solid var(--border);
+  min-height:140px;
+  padding:14px;
+  position:relative;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.day:hover{box-shadow:0 10px 25px rgba(0,0,0,0.05)}
+
+.day-header{
+  font-size:13px;
+  font-weight:600;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+
+.day-number{
+  font-weight:700;
+  font-size:15px;
+}
+
+.today{
+  border:2px solid var(--primary);
+}
+
+.activity{
+  font-size:12px;
+  margin-top:6px;
+  padding:6px 8px;
+  border-radius:12px;
+  background:#f1f5ff;
+}
+
+.popup-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+
+.popup{
+  background:#fff;
+  padding:26px;
+  border-radius:22px;
+  width:92%;
+  max-width:420px;
+  box-shadow:0 25px 60px rgba(0,0,0,0.2);
+}
+
+@media(max-width:900px){
+  .calendar-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:600px){
+  .calendar-grid{grid-template-columns:1fr}
+}
 
 </style>
 </head>
 <body>
 
 <header>
-  <img src="logo.png" alt="Logo" style="height:48px; margin-bottom:10px;">
+  <img src="logo.png" alt="Logo">
   <h1>יומן פעילות</h1>
 </header>
 
 <div class="login-wrapper" id="loginSection">
   <div class="login-card">
     <div class="login-box">
-      <input id="empID" placeholder="מספר עובד">
-      <input id="code" placeholder="קוד אישי">
-      <button onclick="login()">יומן פעילות</button>
+      <input id="empID" type="password" placeholder="מספר עובד" inputmode="numeric" autocomplete="off">
+      <input id="code" type="password" placeholder="קוד אישי" inputmode="numeric" autocomplete="off">
+      <button onclick="login()">כניסה</button>
     </div>
   </div>
 </div>
@@ -75,32 +206,39 @@ button:active{transform:scale(0.96)}
 <div id="appSection" style="display:none;">
   <div class="greeting" id="greeting"></div>
   <div class="week-nav">
-    <button onclick="prevWeek()">שבוע קודם ▶</button>
-    <div id="weekTitle"></div>
-    <button onclick="nextWeek()">◀ שבוע הבא</button>
+    <button class="nav-btn" onclick="prevWeek()">›</button>
+    <div class="week-title" id="weekTitle"></div>
+    <button class="nav-btn" onclick="nextWeek()">‹</button>
   </div>
-  <div id="weekView" class="week-grid"></div>
+  <div class="calendar">
+    <div id="weekView" class="calendar-grid"></div>
+  </div>
+</div>
+
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup(event)">
+  <div class="popup" id="popupContent"></div>
 </div>
 
 <script>
 
-// ===== Program Color Map =====
-const programColors = {
-  "Biomimicry - Middle School":"#F0FFFF",
-  "Green Leadership":"#FFFDD0",
-  "Space Technologies":"#E2F9E1",
-  "Biomimicry":"#F0F5F1",
-  "Artificial Intelligence":"#FDF2F2",
-  "Rokechim Olam":"#F0F8FF",
-  "Sky Is Not The Limit":"#F5F5F5",
-  "Porotzot Derech":"#FFF0F5",
-  "AI Applications":"#FFF5EE",
-  "Premium":"#FEF9E7"
-};
+const EXCEL_FILE = "InstructorData.xlsx";
 
-function getProgramColor(name){
-  return programColors[name] || "#eef2ff";
-}
+// ===== Program Fixed Colors =====
+const programColors = {
+  "Biomimicry - Middle School": "#F0FFFF",
+  "Green Leadership": "#FFFDD0",
+  "Space Technologies": "#E2F9E1",
+  "Biomimicry": "#F0F5F1",
+  "Artificial Intelligence": "#FDF2F2",
+  "Rokechim Olam": "#F0F8FF",
+  "Sky Is Not The Limit": "#F5F5F5",
+  "Porotzot Derech": "#FFF0F5",
+  "AI Applications": "#FFF5EE",
+  "Premium": "#FEF9E7"
+};
+let rawData = [];
+let currentEmployeeName = "";
+let currentWeekStart = getStartOfWeek(new Date());
 
 function getStartOfWeek(date){
   const d = new Date(date);
@@ -111,14 +249,29 @@ function getStartOfWeek(date){
   return d;
 }
 
-let currentWeekStart = getStartOfWeek(new Date());
+async function login(){
+  const empNumber = document.getElementById('empID').value;
+  await loadExcel();
 
-function login(){
-  const name = document.getElementById('empID').value || 'מדריך';
-  document.getElementById('greeting').innerText = 'שלום ' + name;
+  const employeeRows = rawData.filter(r => String(r["EmployeeID"]) === empNumber);
+  if(employeeRows.length === 0){
+    alert("מספר עובד לא נמצא");
+    return;
+  }
+
+  currentEmployeeName = employeeRows[0]["EmployeeName"];
+  document.getElementById('greeting').innerText = "שלום " + currentEmployeeName;
   document.getElementById('loginSection').style.display='none';
   document.getElementById('appSection').style.display='block';
   renderWeek();
+}
+
+async function loadExcel(){
+  const res = await fetch(EXCEL_FILE + "?t=" + Date.now());
+  const data = await res.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  rawData = XLSX.utils.sheet_to_json(sheet);
 }
 
 function renderWeek(){
@@ -129,8 +282,7 @@ function renderWeek(){
   const start = new Date(currentWeekStart);
   const end = new Date(start);
   end.setDate(start.getDate()+6);
-
-  title.innerText = start.toLocaleDateString('he-IL') + ' - ' + end.toLocaleDateString('he-IL');
+  title.innerText = start.toLocaleDateString('he-IL') + " - " + end.toLocaleDateString('he-IL');
 
   const today = new Date();
 
@@ -140,49 +292,57 @@ function renderWeek(){
 
     const div = document.createElement('div');
     div.className='day';
+    if(dayDate.toDateString()===today.toDateString()) div.classList.add('today');
 
-    if(dayDate.toDateString()===today.toDateString()){
-      div.classList.add('today');
-      setTimeout(()=>div.scrollIntoView({behavior:'smooth',inline:'center'}),200);
-    }
+    div.innerHTML = `
+      <div class="day-header">${dayDate.toLocaleDateString('he-IL',{weekday:'long'})}</div>
+      <div class="day-number">${dayDate.getDate()}</div>
+    `;
 
-    div.innerHTML = `<strong>${dayDate.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'numeric'})}</strong>`;
+    const activities = rawData.filter(r => 
+      r["EmployeeName"] === currentEmployeeName &&
+      new Date(r["Date"]).toDateString() === dayDate.toDateString()
+    );
 
-    // Example events with program colors
-    const programsExample = [
-      "Biomimicry - Middle School",
-      "Green Leadership"
-    ];
-
-    programsExample.forEach(program=>{
-      const event = document.createElement('div');
-      event.className='event-card';
-      event.style.background = getProgramColor(program);
-      event.innerText=program;
-      event.onclick = ()=>alert('פרטי הפעילות עבור: ' + program);
-      div.appendChild(event);
+    activities.forEach(act=>{
+      const item = document.createElement('div');
+      item.className='activity';
+      const color = programColors[act["Program"]] || '#f1f5ff';
+      item.style.background = color;
+      item.innerText = act["Program"] + " " + act["StartTime"] + "-" + act["EndTime"];
+      div.appendChild(item);
     });
 
+    div.onclick = ()=>openPopup(dayDate, activities);
     container.appendChild(div);
+  }
+}
+
+function openPopup(date, activities){
+  const overlay = document.getElementById('popupOverlay');
+  const content = document.getElementById('popupContent');
+
+  let html = `<h3>${date.toLocaleDateString('he-IL')}</h3>`;
+  if(activities.length === 0){
+    html += "<p>אין פעילות מתוכננת</p>";
+  } else {
+    activities.forEach(act=>{
+      html += `<p><strong>${act["Program"]}</strong><br>${act["StartTime"]} - ${act["EndTime"]}</p>`;
+    });
+  }
+
+  content.innerHTML = html;
+  overlay.style.display='flex';
+}
+
+function closePopup(e){
+  if(e.target.id==='popupOverlay'){
+    document.getElementById('popupOverlay').style.display='none';
   }
 }
 
 function prevWeek(){currentWeekStart.setDate(currentWeekStart.getDate()-7);renderWeek();}
 function nextWeek(){currentWeekStart.setDate(currentWeekStart.getDate()+7);renderWeek();}
-
-function renderFixedMonthlyMessage(){
-  const today = new Date();
-  const day = today.getDate();
-  const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
-  if(day>=25 && day<=lastDay){
-    const banner = document.createElement('div');
-    banner.className='global-fixed-banner';
-    banner.innerHTML='יש להשלים דיווח שעות וללחוץ על "סיום דיווח" עם סיום הפעולה.<br><a href="https://taasiyeda2026.github.io/attendance/" target="_blank">מעבר למערכת הנוכחות</a>';
-    document.body.insertBefore(banner, document.body.firstChild);
-  }
-}
-
-window.addEventListener('load',()=>{renderFixedMonthlyMessage();});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
