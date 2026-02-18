@@ -1,0 +1,10 @@
+{
+  "name": "weeklyplanner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Weekly planner with secure backend API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
