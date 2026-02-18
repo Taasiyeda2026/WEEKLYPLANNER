@@ -12,8 +12,6 @@
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <style>
 :root{
   --bg:#f3f4f8;
@@ -75,7 +73,7 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
 }
 
 .login-box button{
-  height:36px;
+  min-height:48px;
   width:120px;
   align-self:center;
   border-radius:999px;
@@ -87,6 +85,11 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
   cursor:pointer;
   transition:all 0.18s ease;
   box-shadow:0 8px 18px rgba(91,76,226,0.25);
+}
+
+.login-box button:active{
+  transform:scale(0.96);
+  filter:brightness(0.9);
 }
 
 .login-box button.pressed{
@@ -269,7 +272,6 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
     padding:20px;
   }
 }
-}
 
 </style>
 </head>
@@ -308,19 +310,8 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
 
 <script>
 
-const EXCEL_FILE = "InstructorData.xlsx";
-const PROGRAM_RULES_FILE = "ProgramRules.xlsx";
-const GLOBAL_MESSAGES_FILE = "GlobalMessages.xlsx";
-
-// ===== SHA-256 Hash =====
-// הקוד ב-Excel מאוחסן כ-hash - לא ניתן לקרוא את הסיסמא המקורית מהקובץ
-async function sha256(text){
-  const encoded = new TextEncoder().encode(text);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
-  return Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-let rawData = [];
+let authToken = null;
+let employeeActivities = [];
 let programRules = {};
 let globalMessages = [];
 let currentEmployeeName = null;
@@ -339,6 +330,11 @@ const programColors = {
   "AI Applications": "#FFF5EE",
   "Premium": "#FEF9E7"
 };
+
+const normalizedProgramColors = Object.entries(programColors).reduce((acc,[key,val])=>{
+  acc[normalizeProgramName(key)] = val;
+  return acc;
+},{});
 
 // ===== Holidays =====
 const holidays = {
@@ -370,59 +366,43 @@ const holidays = {
 
 function getStartOfWeek(date){
   const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day;
-  return new Date(d.setDate(diff));
+  const israelDate = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+  const start = new Date(israelDate.getFullYear(), israelDate.getMonth(), israelDate.getDate());
+  const dayOfWeek = start.getDay();
+  start.setDate(start.getDate() - dayOfWeek);
+  return start;
+}
+
+function normalizeProgramName(name){
+  return String(name || '').trim().toLocaleLowerCase('en-US');
+}
+
+function getProgramColor(name){
+  return normalizedProgramColors[normalizeProgramName(name)] || '#f1f5ff';
 }
 
 function formatTime(t){
   if(!t) return '';
   if(t instanceof Date) return t.toTimeString().slice(0,5);
-  return String(t);
-}
 
-async function loadExcel(){
-  const res = await fetch(EXCEL_FILE + "?t=" + Date.now());
-  const data = await res.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "array", cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  rawData = XLSX.utils.sheet_to_json(sheet, { raw: true });
-}
-
-async function loadProgramRules(){
-  const res = await fetch(PROGRAM_RULES_FILE + "?t=" + Date.now());
-  const data = await res.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "array" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  // header:1 returns arrays - avoids issues with duplicate column names (NoteType, NoteText x3)
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
-  programRules = {};
-  for(let i = 1; i < rows.length; i++){
-    const row = rows[i];
-    const program = row[0];
-    const meetingNum = row[1];
-    if(!program || !meetingNum) continue;
-    if(!programRules[program]) programRules[program] = {};
-    const notes = [];
-    for(let j = 2; j + 1 < row.length; j += 2){
-      const type = row[j];
-      const text = row[j + 1];
-      if(type && text) notes.push({ type, text });
-    }
-    programRules[program][meetingNum] = notes;
+  const value = String(t).trim();
+  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)){
+    return value.slice(11,16);
   }
+
+  return value;
 }
 
-async function loadGlobalMessages(){
-  const res = await fetch(GLOBAL_MESSAGES_FILE + "?t=" + Date.now());
-  const data = await res.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "array" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
-  globalMessages = rows.filter(r => r.Message).map(r => ({
-    message: r.Message,
-    type: r.Type || "Info"
-  }));
+async function fetchSchedule(){
+  const res = await fetch('/api/me/schedule', {
+    headers: { Authorization: `Bearer ${authToken}` }
+  });
+  if(!res.ok) throw new Error('Failed to load schedule');
+  const payload = await res.json();
+  currentEmployeeName = payload.employeeName;
+  employeeActivities = payload.activities || [];
+  programRules = payload.programRules || {};
+  globalMessages = payload.globalMessages || [];
 }
 
 function noteHtml(note){
@@ -446,13 +426,13 @@ async function login(){
   btn.classList.add('pressed','loading');
   btn.innerText = "טוען...";
 
-  const hashedCode = await sha256(code);
-  console.log('[Login] empID:', empID, '| hashedCode:', hashedCode);
-  const firstRow = rawData[0];
-  if(firstRow) console.log('[Login] Sample row - EmployeeID:', firstRow.EmployeeID, '| Code:', String(firstRow.Code).slice(0,20)+'...');
-  const match = rawData.find(r => String(r.EmployeeID) === empID && r.Code === hashedCode);
+  const loginRes = await fetch('/api/login', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ employeeId: empID, code })
+  });
 
-  if(!match){
+  if(!loginRes.ok){
     btn.classList.remove('pressed','loading');
     btn.innerText = "כניסה";
     card.classList.add('shake');
@@ -460,7 +440,10 @@ async function login(){
     return;
   }
 
-  currentEmployeeName = match.Employee;
+  const payload = await loginRes.json();
+  authToken = payload.token;
+  await fetchSchedule();
+
   document.getElementById("greeting").innerText = "שלום " + currentEmployeeName;
 
   document.getElementById("loginSection").style.display = "none";
@@ -508,33 +491,27 @@ function renderWeek(){
 
     // Collect activities for this day
     const activities = [];
-    rawData.forEach(r=>{
-      if(r["Employee"] !== currentEmployeeName) return;
-      for(let j=1;j<=16;j++){
-        const dateField = r["Date"+j];
-        const cancelField = r["Cancel"+j];
-        if(!dateField) continue;
-        if(cancelField && new Date(cancelField).toDateString() === new Date(dateField).toDateString()) continue;
-        const activityDate = new Date(dateField);
-        if(activityDate.toDateString() === dayDate.toDateString()){
-          activities.push({
-            Program: r["Program"],
-            StartTime: r["StartTime"],
-            EndTime: r["EndTime"],
-            Manager: r["Manager"],
-            School: r["School"],
-            Class: r["Class"],
-            Authority: r["Authority"],
-            MeetingNumber: j
-          });
-        }
+    employeeActivities.forEach(activity=>{
+      const activityDate = new Date(activity.date);
+      if(activityDate.toDateString() === dayDate.toDateString()){
+        activities.push({
+          Program: activity.program,
+          ProgramKey: activity.programKey,
+          StartTime: activity.startTime,
+          EndTime: activity.endTime,
+          Manager: activity.manager,
+          School: activity.school,
+          Class: activity.className,
+          Authority: activity.authority,
+          MeetingNumber: activity.meetingNumber
+        });
       }
     });
 
     activities.forEach(act=>{
       const item = document.createElement('div');
       item.className='activity';
-      item.style.background = programColors[act.Program] || '#f1f5ff';
+      item.style.background = getProgramColor(act.Program);
       item.innerText = act.Program + " " + formatTime(act.StartTime) + "-" + formatTime(act.EndTime);
       div.appendChild(item);
     });
@@ -559,8 +536,8 @@ function openPopup(date, activities){
     html += "<p>אין פעילות מתוכננת</p>";
   } else {
     activities.forEach(act=>{
-      const color = programColors[act.Program] || '#f1f5ff';
-      const notes = (programRules[act.Program] && programRules[act.Program][act.MeetingNumber]) || [];
+      const color = getProgramColor(act.Program);
+      const notes = (programRules[normalizeProgramName(act.Program)] && programRules[normalizeProgramName(act.Program)][act.MeetingNumber]) || [];
       const notesHtml = notes.map(n => noteHtml(n)).join('');
       html += `
         <div style="border:1px solid #e6e8ef;border-radius:16px;padding:14px;margin-bottom:14px;background:${color}">
@@ -592,10 +569,6 @@ function prevWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()-7); ren
 function nextWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()+7); renderWeek(); }
 
 window.addEventListener('load', async ()=>{
-  // InstructorData.xlsx מכיל את עמודת Code כ-SHA-256 hash בלבד
-  // הקוד המקורי של העובד אינו קריא מתוך הקובץ
-  await Promise.all([loadExcel(), loadProgramRules(), loadGlobalMessages()]);
-
   const empInput = document.getElementById('empID');
   const codeInput = document.getElementById('code');
 
@@ -615,7 +588,8 @@ window.addEventListener('load', async ()=>{
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js');
+    const swVersion = 'v2';
+    navigator.serviceWorker.register(`sw.js?${swVersion}`);
   });
 }
 
