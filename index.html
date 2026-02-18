@@ -283,9 +283,11 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
 <div class="login-wrapper" id="loginSection">
   <div class="login-card">
     <div class="login-box">
-      <input id="empID" type="password" placeholder="מספר עובד" inputmode="numeric" autocomplete="off">
-      <input id="code" type="password" placeholder="קוד אישי" inputmode="numeric" autocomplete="off">
-      <button id="loginBtn" onclick="login()">כניסה</button>
+      <div id="loadingMsg" style="text-align:center;font-size:13px;color:var(--muted);padding:8px 0">טוען נתונים...</div>
+      <input id="empID" type="password" placeholder="מספר עובד" inputmode="numeric" autocomplete="off" disabled>
+      <input id="code" type="password" placeholder="קוד אישי" inputmode="numeric" autocomplete="off" disabled>
+      <button id="loginBtn" onclick="login()" disabled style="opacity:0.5">כניסה</button>
+      <div id="loadError" style="display:none;text-align:center;font-size:12px;color:#ef4444;padding:4px 0"></div>
     </div>
   </div>
 </div>
@@ -583,9 +585,29 @@ function prevWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()-7); ren
 function nextWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()+7); renderWeek(); }
 
 window.addEventListener('load', async ()=>{
-  // InstructorData.xlsx מכיל את עמודת Code כ-SHA-256 hash בלבד
-  // הקוד המקורי של העובד אינו קריא מתוך הקובץ
-  await Promise.all([loadExcel(), loadProgramRules(), loadGlobalMessages()]);
+  // טוען את שלושת קבצי ה-Excel במקביל:
+  //   InstructorData.xlsx  - נתוני עובדים ופעילויות (Code = SHA-256 hash)
+  //   ProgramRules.xlsx    - הערות וחובות לכל תכנית ומפגש
+  //   GlobalMessages.xlsx  - הודעות כלליות לכל המשתמשים
+  try {
+    await Promise.all([loadExcel(), loadProgramRules(), loadGlobalMessages()]);
+
+    // הסתרת הודעת הטעינה, הפעלת הטופס
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('empID').disabled = false;
+    document.getElementById('code').disabled = false;
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+
+  } catch(err) {
+    console.error('Excel load error:', err);
+    document.getElementById('loadingMsg').style.display = 'none';
+    const errEl = document.getElementById('loadError');
+    errEl.style.display = 'block';
+    errEl.innerText = 'שגיאה בטעינת הנתונים. רענן את הדף ונסה שוב.';
+    return;
+  }
 
   const empInput = document.getElementById('empID');
   const codeInput = document.getElementById('code');
