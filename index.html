@@ -309,7 +309,12 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
 <script>
 
 const EXCEL_FILE = "InstructorData.xlsx";
+const PROGRAM_RULES_FILE = "ProgramRules.xlsx";
+const GLOBAL_MESSAGES_FILE = "GlobalMessages.xlsx";
+
 let rawData = [];
+let programRules = {};
+let globalMessages = [];
 let currentEmployeeName = null;
 let currentWeekStart = getStartOfWeek(new Date());
 
@@ -368,6 +373,52 @@ async function loadExcel(){
   const workbook = XLSX.read(data, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   rawData = XLSX.utils.sheet_to_json(sheet, { raw: true });
+}
+
+async function loadProgramRules(){
+  const res = await fetch(PROGRAM_RULES_FILE + "?t=" + Date.now());
+  const data = await res.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  // header:1 returns arrays - avoids issues with duplicate column names (NoteType, NoteText x3)
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+  programRules = {};
+  for(let i = 1; i < rows.length; i++){
+    const row = rows[i];
+    const program = row[0];
+    const meetingNum = row[1];
+    if(!program || !meetingNum) continue;
+    if(!programRules[program]) programRules[program] = {};
+    const notes = [];
+    for(let j = 2; j + 1 < row.length; j += 2){
+      const type = row[j];
+      const text = row[j + 1];
+      if(type && text) notes.push({ type, text });
+    }
+    programRules[program][meetingNum] = notes;
+  }
+}
+
+async function loadGlobalMessages(){
+  const res = await fetch(GLOBAL_MESSAGES_FILE + "?t=" + Date.now());
+  const data = await res.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
+  globalMessages = rows.filter(r => r.Message).map(r => ({
+    message: r.Message,
+    type: r.Type || "Info"
+  }));
+}
+
+function noteHtml(note){
+  const styles = {
+    'Reminder': { bg:'#fff8e1', border:'#f59e0b', color:'#7c5c00', label:'תזכורת' },
+    'Mandatory': { bg:'#fef2f2', border:'#ef4444', color:'#7f1d1d', label:'חובה' },
+    'Info':      { bg:'#eff6ff', border:'#60a5fa', color:'#1e3a5f', label:'מידע' }
+  };
+  const s = styles[note.type] || styles['Info'];
+  return `<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:${s.bg};border-right:3px solid ${s.border};font-size:12px;color:${s.color}"><strong>${s.label}:</strong> ${note.text}</div>`;
 }
 
 function login(){
@@ -438,403 +489,15 @@ function renderWeek(){
       ${holidayName ? `<div style="margin-top:6px;font-size:12px;font-weight:700;color:#b45309">${holidayName}</div>` : ''}
     `;
 
-    container.appendChild(div);
-  }
-}
-
-function prevWeek(){
-  currentWeekStart.setDate(currentWeekStart.getDate()-7);
-  renderWeek();
-}
-
-function nextWeek(){
-  currentWeekStart.setDate(currentWeekStart.getDate()+7);
-  renderWeek();
-}
-
-window.addEventListener('load', async ()=>{
-  await loadExcel();
-
-  // Enter key login support
-  const empInput = document.getElementById('empID');
-  const codeInput = document.getElementById('code');
-
-  function handleEnter(e){
-    if(e.key === 'Enter'){
-      e.preventDefault();
-      const btn = document.getElementById('loginBtn');
-      btn.classList.add('pressed');
-      setTimeout(()=>btn.classList.remove('pressed'),150);
-      login();
-    }
-  }
-  }
-
-  empInput.addEventListener('keydown', handleEnter);
-  codeInput.addEventListener('keydown', handleEnter);
-});
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js');
-  });
-}
-
-</script>
-
-</body>
-</html>
-  position:relative;
-  z-index:10;
-}
-
-header img{height:48px;margin-bottom:8px}
-
-h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
-
-.login-wrapper{
-  min-height:80vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-}
-
-.login-card{
-  width:100%;
-  max-width:320px;
-  background:var(--card);
-  padding:36px 28px;
-  border-radius:22px;
-  border:1px solid var(--border);
-  box-shadow:0 30px 70px rgba(0,0,0,0.08),
-             0 8px 20px rgba(0,0,0,0.05);
-  backdrop-filter:blur(6px);
-}
-
-.login-box{display:flex;flex-direction:column;gap:16px}
-
-.login-box input{
-  height:64px;
-  border-radius:16px;
-  border:1px solid var(--border);
-  text-align:center;
-  font-size:16px;
-  font-weight:600;
-  background:#fafbff;
-}
-
-.login-box button{
-  height:36px;
-  width:120px;
-  align-self:center;
-  border-radius:999px;
-  border:none;
-  background:var(--primary);
-  color:#fff;
-  font-weight:600;
-  font-size:13px;
-  cursor:pointer;
-}
-
-.greeting{
-  text-align:center;
-  font-weight:800;
-  padding:22px;
-  font-size:26px;
-  color:var(--primary);
-  letter-spacing:0.3px;
-}
-
-.week-nav{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:18px;
-  padding:18px;
-  margin:0 20px 10px 20px;
-  background:#fff;
-  border-radius:20px;
-  border:1px solid var(--border);
-  box-shadow:0 15px 40px rgba(0,0,0,0.05);
-}
-
-.nav-btn{
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  border:1px solid var(--border);
-  background:#fff;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:16px;
-  transition:all 0.2s ease;
-  box-shadow:0 6px 14px rgba(0,0,0,0.08);
-}
-
-.nav-btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 10px 22px rgba(0,0,0,0.12);
-}
-
-.nav-btn:active{
-  transform:translateY(1px) scale(0.96);
-  box-shadow:0 3px 8px rgba(0,0,0,0.15) inset;
-}
-
-.week-title{
-  font-weight:600;
-}
-
-.calendar{
-  padding:20px;
-  max-width:1200px;
-  margin:auto;
-}
-
-.calendar-grid{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:16px;
-}
-
-.day{
-  background:var(--card);
-  border-radius:20px;
-  border:1px solid var(--border);
-  min-height:140px;
-  padding:16px;
-  position:relative;
-  cursor:pointer;
-  transition:all 0.25s ease;
-  box-shadow:0 20px 45px rgba(0,0,0,0.05),
-             0 5px 12px rgba(0,0,0,0.03);
-}
-
-.day:hover{
-  transform:translateY(-3px);
-  box-shadow:0 30px 60px rgba(0,0,0,0.08),
-             0 8px 18px rgba(0,0,0,0.05);
-}
-
-.day-header{
-  font-size:13px;
-  font-weight:600;
-  color:var(--muted);
-  margin-bottom:8px;
-}
-
-.day-number{
-  font-weight:700;
-  font-size:15px;
-}
-
-.today{
-  border:2px solid var(--primary);
-}
-
-.activity{
-  font-size:12px;
-  margin-top:6px;
-  padding:6px 8px;
-  border-radius:12px;
-  background:#f1f5ff;
-}
-
-.popup-overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.35);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:1000;
-}
-
-.popup{
-  background:#fff;
-  padding:28px;
-  border-radius:22px;
-  width:92%;
-  max-width:420px;
-  box-shadow:0 40px 80px rgba(0,0,0,0.25),
-             0 15px 30px rgba(0,0,0,0.15);
-  animation:fadeInScale 0.25s ease;
-}
-
-@keyframes fadeInScale{
-  from{opacity:0;transform:scale(0.95)}
-  to{opacity:1;transform:scale(1)}
-}
-
-@media(max-width:900px){
-  .calendar-grid{grid-template-columns:repeat(2,1fr)}
-}
-
-@media(max-width:600px){
-  .calendar{
-    padding:24px 20px 40px 20px;
-  }
-
-  .calendar-grid{
-    grid-template-columns:1fr;
-    max-width:420px;
-    margin:0 auto;
-    gap:20px;
-  }
-
-  .week-nav{
-    margin:0 24px 14px 24px;
-  }
-
-  .day{
-    min-height:160px;
-    padding:20px;
-  }
-}
-}
-
-</style>
-</head>
-<body>
-
-<header>
-  <img src="logo.png" alt="Logo">
-  <h1>יומן פעילות</h1>
-</header>
-
-<div class="login-wrapper" id="loginSection">
-  <div class="login-card">
-    <div class="login-box">
-      <input id="empID" type="password" placeholder="מספר עובד" inputmode="numeric" autocomplete="off">
-      <input id="code" type="password" placeholder="קוד אישי" inputmode="numeric" autocomplete="off">
-      <button onclick="login()">כניסה</button>
-    </div>
-  </div>
-</div>
-
-<div id="appSection" style="display:none;">
-  <div class="greeting" id="greeting"></div>
-  <div class="week-nav">
-    <button class="nav-btn" onclick="prevWeek()">‹</button>
-    <div class="week-title" id="weekTitle"></div>
-    <button class="nav-btn" onclick="nextWeek()">›</button>
-  </div>
-  <div class="calendar">
-    <div id="weekView" class="calendar-grid"></div>
-  </div>
-</div>
-
-<div class="popup-overlay" id="popupOverlay" onclick="closePopup(event)">
-  <div class="popup" id="popupContent"></div>
-</div>
-
-<script>
-
-const EXCEL_FILE = "InstructorData.xlsx";
-
-// ===== Program Fixed Colors =====
-const programColors = {
-  "Biomimicry - Middle School": "#F0FFFF",
-  "Green Leadership": "#FFFDD0",
-  "Space Technologies": "#E2F9E1",
-  "Biomimicry": "#F0F5F1",
-  "Artificial Intelligence": "#FDF2F2",
-  "Rokechim Olam": "#F0F8FF",
-  "Sky Is Not The Limit": "#F5F5F5",
-  "Porotzot Derech": "#FFF0F5",
-  "AI Applications": "#FFF5EE",
-  "Premium": "#FEF9E7"
-};
-let rawData = [];
-let programRules = {
-    "Biomimicry": {
-      7: "מפגש 7 – לוודא היערכות למפגש הבא (ציוד ודגם AI/פיזי)"
-    },
-    "Biomimicry - Middle School": {
-      7: "מפגש 7 – בדיקת סטטוס הכנת דגמים"
-    }
-  };
-}
-
-// ===== Holidays Layer =====
-const holidays = {
-  "03/03/2026": "פורים",
-  "04/03/2026": "פורים",
-  "24/03/2026": "פסח",
-  "25/03/2026": "פסח",
-  "26/03/2026": "פסח",
-  "27/03/2026": "פסח",
-  "28/03/2026": "פסח",
-  "29/03/2026": "פסח",
-  "30/03/2026": "פסח",
-  "31/03/2026": "פסח",
-  "01/04/2026": "פסח",
-  "02/04/2026": "פסח",
-  "03/04/2026": "פסח",
-  "04/04/2026": "פסח",
-  "05/04/2026": "פסח",
-  "06/04/2026": "פסח",
-  "07/04/2026": "פסח",
-  "08/04/2026": "פסח",
-  "20/04/2026": "ערב יום הזיכרון",
-  "21/04/2026": "יום הזיכרון",
-  "22/04/2026": "יום העצמאות",
-  "08/05/2026": "ל״ג בעומר",
-  "21/05/2026": "שבועות",
-  "22/05/2026": "שבועות"
-};
-}
-
-function renderWeek(){
-  const container = document.getElementById('weekView');
-  const title = document.getElementById('weekTitle');
-  container.innerHTML='';
-
-  const start = new Date(currentWeekStart);
-  const end = new Date(start);
-  end.setDate(start.getDate()+6);
-  title.innerText = start.toLocaleDateString('he-IL') + " - " + end.toLocaleDateString('he-IL');
-
-  const today = new Date();
-
-  for(let i=0;i<7;i++){
-    const dayDate = new Date(start);
-    dayDate.setDate(start.getDate()+i);
-
-    const div = document.createElement('div');
-    div.className='day';
-    if(dayDate.toDateString()===today.toDateString()) div.classList.add('today');
-
-    const dateKey = dayDate.toLocaleDateString('en-GB');
-    const holidayName = holidays[dateKey];
-
-    if(holidayName){
-      div.style.background = '#fff7ed';
-      div.style.border = '2px solid #f59e0b';
-    }
-
-    div.innerHTML = `
-      <div class="day-header">${dayDate.toLocaleDateString('he-IL',{weekday:'long'})}</div>
-      <div class="day-number">${dayDate.getDate()}</div>
-      ${holidayName ? `<div style="margin-top:6px;font-size:12px;font-weight:700;color:#b45309">${holidayName}</div>` : ''}
-    `;
-
-    // Collect activities from Date1-Date16 excluding Cancel1-Cancel16
+    // Collect activities for this day
     const activities = [];
-
     rawData.forEach(r=>{
       if(r["Employee"] !== currentEmployeeName) return;
-
-      for(let i=1;i<=16;i++){
-        const dateField = r["Date"+i];
-        const cancelField = r["Cancel"+i];
-
+      for(let j=1;j<=16;j++){
+        const dateField = r["Date"+j];
+        const cancelField = r["Cancel"+j];
         if(!dateField) continue;
         if(cancelField && new Date(cancelField).toDateString() === new Date(dateField).toDateString()) continue;
-
         const activityDate = new Date(dateField);
         if(activityDate.toDateString() === dayDate.toDateString()){
           activities.push({
@@ -845,7 +508,7 @@ function renderWeek(){
             School: r["School"],
             Class: r["Class"],
             Authority: r["Authority"],
-            MeetingNumber: i
+            MeetingNumber: j
           });
         }
       }
@@ -854,9 +517,8 @@ function renderWeek(){
     activities.forEach(act=>{
       const item = document.createElement('div');
       item.className='activity';
-      const color = programColors[act["Program"]] || '#f1f5ff';
-      item.style.background = color;
-      item.innerText = act["Program"] + " " + act["StartTime"] + "-" + act["EndTime"];
+      item.style.background = programColors[act.Program] || '#f1f5ff';
+      item.innerText = act.Program + " " + act.StartTime + "-" + act.EndTime;
       div.appendChild(item);
     });
 
@@ -871,34 +533,36 @@ function openPopup(date, activities){
 
   let html = `<h3 style="margin-top:0">${date.toLocaleDateString('he-IL')}</h3>`;
 
+  if(globalMessages.length > 0){
+    globalMessages.forEach(gm => { html += noteHtml({ type: gm.type, text: gm.message }); });
+    html += '<hr style="margin:14px 0;border:none;border-top:1px solid #e6e8ef">';
+  }
+
   if(activities.length === 0){
     html += "<p>אין פעילות מתוכננת</p>";
   } else {
     activities.forEach(act=>{
       const color = programColors[act.Program] || '#f1f5ff';
-
-      let reminderHtml = "";
-      const nextMeeting = act.MeetingNumber + 1;
-      if(programRules[act.Program] && programRules[act.Program][nextMeeting]){
-        reminderHtml = `<div style="margin-top:8px;padding:8px;border-radius:12px;background:#fff3cd;font-size:12px"><strong>תזכורת למפגש הבא (${nextMeeting}):</strong><br>${programRules[act.Program][nextMeeting]}</div>`;
-      }
-
+      const notes = (programRules[act.Program] && programRules[act.Program][act.MeetingNumber]) || [];
+      const notesHtml = notes.map(n => noteHtml(n)).join('');
       html += `
         <div style="border:1px solid #e6e8ef;border-radius:16px;padding:14px;margin-bottom:14px;background:${color}">
-          <div style="font-weight:700;margin-bottom:6px">${act.Program}</div>
+          <div style="font-weight:700;margin-bottom:8px">${act.Program}</div>
           <div><strong>בית ספר:</strong> ${act.School}</div>
           <div><strong>רשות:</strong> ${act.Authority || ''}</div>
           <div><strong>כיתה:</strong> ${act.Class || ''}</div>
           <div><strong>שעות:</strong> ${act.StartTime} - ${act.EndTime}</div>
           <div><strong>מספר מפגש:</strong> ${act.MeetingNumber}</div>
-          ${reminderHtml}
+          ${notesHtml}
         </div>
       `;
     });
   }
 
+  content.style.maxHeight = '80vh';
+  content.style.overflowY = 'auto';
   content.innerHTML = html;
-  overlay.style.display='flex';
+  overlay.style.display = 'flex';
 }
 
 function closePopup(e){
@@ -907,11 +571,31 @@ function closePopup(e){
   }
 }
 
-function prevWeek(){currentWeekStart.setDate(currentWeekStart.getDate()-7);renderWeek();}
-function nextWeek(){currentWeekStart.setDate(currentWeekStart.getDate()+7);renderWeek();}
+function prevWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()-7); renderWeek(); }
+function nextWeek(){ currentWeekStart.setDate(currentWeekStart.getDate()+7); renderWeek(); }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
+window.addEventListener('load', async ()=>{
+  await Promise.all([loadExcel(), loadProgramRules(), loadGlobalMessages()]);
+
+  const empInput = document.getElementById('empID');
+  const codeInput = document.getElementById('code');
+
+  function handleEnter(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('pressed');
+      setTimeout(()=>btn.classList.remove('pressed'),150);
+      login();
+    }
+  }
+
+  empInput.addEventListener('keydown', handleEnter);
+  codeInput.addEventListener('keydown', handleEnter);
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
     navigator.serviceWorker.register('sw.js');
   });
 }
