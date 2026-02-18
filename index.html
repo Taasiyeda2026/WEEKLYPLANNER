@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>יומן פעילות</title>
 
-<!-- PWA Enabled (NO DATA STORAGE) -->
 <meta name="theme-color" content="#4f46e5">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
@@ -25,114 +24,35 @@
 }
 
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:'Inter',sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
 
-header{
-  background:#fff;
-  padding:20px;
-  border-bottom:1px solid var(--border);
-  text-align:center;
-}
+header{background:#fff;padding:20px;border-bottom:1px solid var(--border);text-align:center}
 
-.login-wrapper{
-  display:flex;
-  justify-content:center;
-  padding:30px 16px;
-}
+.login-wrapper{display:flex;justify-content:center;padding:40px 16px}
+.login-card{width:100%;max-width:300px;background:#fff;padding:32px;border-radius:20px;border:1px solid var(--border);box-shadow:0 20px 50px rgba(0,0,0,0.05)}
+.login-box{display:flex;flex-direction:column;gap:14px}
 
-.login-card{
-  width:100%;
-  max-width:320px;
-  background:#fff;
-  padding:30px;
-  border-radius:18px;
-  border:1px solid var(--border);
-  box-shadow:0 20px 50px rgba(0,0,0,0.05);
-}
+input{height:60px;padding:0 16px;font-size:16px;border-radius:14px;border:1px solid var(--border);text-align:center}
 
-.login-box{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
+button{height:40px;border:none;border-radius:999px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer;padding:0 18px;width:120px;align-self:center;font-size:14px;box-shadow:0 6px 14px rgba(79,70,229,0.25)}
+button:active{transform:scale(0.96)}
 
-input{
-  height:60px;
-  padding:0 16px;
-  font-size:16px;
-  border-radius:12px;
-  border:1px solid var(--border);
-}
+.greeting{padding:16px;text-align:center;font-weight:600}
 
-button{
-  height:42px;
-  border:none;
-  border-radius:999px;
-  background:var(--primary);
-  color:#fff;
-  font-weight:600;
-  cursor:pointer;
-  padding:0 18px;
-  width:120px;
-  align-self:center;
-  font-size:14px;
-  box-shadow:0 6px 14px rgba(79,70,229,0.25);
-}
+.week-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid var(--border)}
 
-button:active{
-  transform:scale(0.96);
-}
+.week-grid{padding:16px;display:flex;overflow-x:auto;gap:16px;scroll-snap-type:x mandatory}
 
-.week-nav{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:12px 16px;
-  background:#fff;
-  border-bottom:1px solid var(--border);
-}
+.day{min-width:260px;background:#fff;padding:16px;border-radius:18px;border:1px solid var(--border);scroll-snap-align:center;transition:0.2s}
 
-.week-grid{
-  padding:16px;
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:16px;
-}
+.today{border:2px solid var(--primary);box-shadow:0 0 0 4px var(--primary-glow)}
 
-.day{
-  background:#fff;
-  padding:16px;
-  border-radius:16px;
-  border:1px solid var(--border);
-}
+.event-card{margin-top:12px;padding:10px;border-radius:12px;font-size:13px;cursor:pointer;display:inline-block;max-width:200px;border:1px solid var(--border);transition:0.2s}
+.event-card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,0.08)}
 
-.today{
-  border:2px solid var(--primary);
-  box-shadow:0 0 0 4px var(--primary-glow);
-}
+.global-fixed-banner{background:#dc2626;color:#fff;padding:16px;text-align:center;font-weight:600}
+.global-fixed-banner a{display:inline-block;margin-top:10px;background:#fff;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none}
 
-.global-fixed-banner{
-  background:#dc2626;
-  color:#fff;
-  padding:16px;
-  text-align:center;
-  font-weight:600;
-}
-
-.global-fixed-banner a{
-  display:inline-block;
-  margin-top:10px;
-  background:#fff;
-  color:#dc2626;
-  padding:8px 14px;
-  border-radius:10px;
-  text-decoration:none;
-}
 </style>
 </head>
 <body>
@@ -153,15 +73,34 @@ button:active{
 </div>
 
 <div id="appSection" style="display:none;">
+  <div class="greeting" id="greeting"></div>
   <div class="week-nav">
-    <button onclick="prevWeek()">◀ שבוע קודם</button>
+    <button onclick="prevWeek()">שבוע קודם ▶</button>
     <div id="weekTitle"></div>
-    <button onclick="nextWeek()">שבוע הבא ▶</button>
+    <button onclick="nextWeek()">◀ שבוע הבא</button>
   </div>
   <div id="weekView" class="week-grid"></div>
 </div>
 
 <script>
+
+// ===== Program Color Map =====
+const programColors = {
+  "Biomimicry - Middle School":"#F0FFFF",
+  "Green Leadership":"#FFFDD0",
+  "Space Technologies":"#E2F9E1",
+  "Biomimicry":"#F0F5F1",
+  "Artificial Intelligence":"#FDF2F2",
+  "Rokechim Olam":"#F0F8FF",
+  "Sky Is Not The Limit":"#F5F5F5",
+  "Porotzot Derech":"#FFF0F5",
+  "AI Applications":"#FFF5EE",
+  "Premium":"#FEF9E7"
+};
+
+function getProgramColor(name){
+  return programColors[name] || "#eef2ff";
+}
 
 function getStartOfWeek(date){
   const d = new Date(date);
@@ -175,6 +114,8 @@ function getStartOfWeek(date){
 let currentWeekStart = getStartOfWeek(new Date());
 
 function login(){
+  const name = document.getElementById('empID').value || 'מדריך';
+  document.getElementById('greeting').innerText = 'שלום ' + name;
   document.getElementById('loginSection').style.display='none';
   document.getElementById('appSection').style.display='block';
   renderWeek();
@@ -202,28 +143,37 @@ function renderWeek(){
 
     if(dayDate.toDateString()===today.toDateString()){
       div.classList.add('today');
+      setTimeout(()=>div.scrollIntoView({behavior:'smooth',inline:'center'}),200);
     }
 
     div.innerHTML = `<strong>${dayDate.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'numeric'})}</strong>`;
+
+    // Example events with program colors
+    const programsExample = [
+      "Biomimicry - Middle School",
+      "Green Leadership"
+    ];
+
+    programsExample.forEach(program=>{
+      const event = document.createElement('div');
+      event.className='event-card';
+      event.style.background = getProgramColor(program);
+      event.innerText=program;
+      event.onclick = ()=>alert('פרטי הפעילות עבור: ' + program);
+      div.appendChild(event);
+    });
+
     container.appendChild(div);
   }
 }
 
-function prevWeek(){
-  currentWeekStart.setDate(currentWeekStart.getDate()-7);
-  renderWeek();
-}
-
-function nextWeek(){
-  currentWeekStart.setDate(currentWeekStart.getDate()+7);
-  renderWeek();
-}
+function prevWeek(){currentWeekStart.setDate(currentWeekStart.getDate()-7);renderWeek();}
+function nextWeek(){currentWeekStart.setDate(currentWeekStart.getDate()+7);renderWeek();}
 
 function renderFixedMonthlyMessage(){
   const today = new Date();
   const day = today.getDate();
   const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
-
   if(day>=25 && day<=lastDay){
     const banner = document.createElement('div');
     banner.className='global-fixed-banner';
@@ -232,11 +182,8 @@ function renderFixedMonthlyMessage(){
   }
 }
 
-window.addEventListener('load',()=>{
-  renderFixedMonthlyMessage();
-});
+window.addEventListener('load',()=>{renderFixedMonthlyMessage();});
 
-/* Service Worker Registration (NO DATA CACHE) */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('sw.js');
