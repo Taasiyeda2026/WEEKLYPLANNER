@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>מחולל Hash - כלי מנהל</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;background:#f5f5f5;color:#1f2937}
+h1{font-size:20px;margin-bottom:4px}
+p.sub{color:#6b7280;font-size:13px;margin-top:0}
+.card{background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+label{font-size:13px;font-weight:600;display:block;margin-bottom:6px}
+textarea,input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-size:14px;font-family:monospace}
+textarea{height:120px;resize:vertical}
+button{margin-top:12px;padding:10px 24px;background:#5b4ce2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+button:hover{background:#4a3bc4}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f3f4f6;text-align:right;padding:8px 12px;border:1px solid #e5e7eb;font-size:12px}
+td{padding:8px 12px;border:1px solid #e5e7eb;font-family:monospace}
+td.hash{font-size:11px;color:#374151;word-break:break-all}
+td.code-orig{color:#6b7280}
+.copy-btn{padding:4px 10px;font-size:11px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;white-space:nowrap}
+.copy-btn:hover{background:#e5e7eb}
+.note{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e;margin-bottom:16px}
+.single-row{display:flex;gap:10px;align-items:flex-end}
+.single-row input{flex:1}
+.single-row button{margin-top:0;white-space:nowrap}
+#singleResult{margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;font-family:monospace;font-size:12px;display:none;word-break:break-all}
+</style>
+</head>
+<body>
+
+<h1>מחולל Hash לקודי עובדים</h1>
+<p class="sub">כלי זה מיועד למנהל בלבד — אל תפרסם אותו</p>
+
+<div class="note">
+  ⚠️ הכלי הזה מחשב SHA-256 hash לכל קוד. הדבק את ה-Hash בעמודת <strong>Code</strong> ב-Excel במקום הקוד המקורי.
+  הקוד המקורי <strong>לא נשמר</strong> ולא נשלח לשום מקום — הכל מחושב מקומית בדפדפן שלך.
+</div>
+
+<!-- Single -->
+<div class="card">
+  <label>המרה בודדת - בדיקה מהירה</label>
+  <div class="single-row">
+    <input type="text" id="singleInput" placeholder="הקלד קוד (לדוגמה: 1234)">
+    <button onclick="hashSingle()">חשב Hash</button>
+  </div>
+  <div id="singleResult"></div>
+</div>
+
+<!-- Bulk -->
+<div class="card">
+  <label>המרה מרובה - הדבק רשימה</label>
+  <p style="font-size:12px;color:#6b7280;margin:0 0 8px">פורמט: שורה אחת לכל עובד — <code>מספרעובד,קוד</code></p>
+  <textarea id="bulkInput" placeholder="101,1234&#10;102,5678&#10;103,9012"></textarea>
+  <button onclick="hashBulk()">המר הכל</button>
+</div>
+
+<!-- Results -->
+<div class="card" id="resultsCard" style="display:none">
+  <label>תוצאות — העתק ל-Excel</label>
+  <p style="font-size:12px;color:#6b7280;margin:0 0 12px">העמודה <strong>Code</strong> ב-Excel צריכה להכיל את ה-Hash (עמודה ירוקה)</p>
+  <table>
+    <thead>
+      <tr>
+        <th>EmployeeID</th>
+        <th>קוד מקורי</th>
+        <th>Hash (להדביק ב-Excel)</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</div>
+
+<script>
+async function sha256(text){
+  const encoded = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function hashSingle(){
+  const val = document.getElementById('singleInput').value.trim();
+  if(!val) return;
+  const h = await sha256(val);
+  const el = document.getElementById('singleResult');
+  el.style.display = 'block';
+  el.innerHTML = `<strong>Hash:</strong> ${h} <button class="copy-btn" onclick="navigator.clipboard.writeText('${h}')">העתק</button>`;
+}
+
+async function hashBulk(){
+  const lines = document.getElementById('bulkInput').value.trim().split('\n').filter(l=>l.trim());
+  if(!lines.length) return;
+
+  const tbody = document.getElementById('resultsBody');
+  tbody.innerHTML = '';
+
+  for(const line of lines){
+    const parts = line.split(',');
+    const empId = parts[0]?.trim() || '';
+    const code = parts[1]?.trim() || '';
+    if(!code) continue;
+
+    const h = await sha256(code);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${empId}</td>
+      <td class="code-orig">${code}</td>
+      <td class="hash">${h}</td>
+      <td><button class="copy-btn" onclick="navigator.clipboard.writeText('${h}')">העתק</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('resultsCard').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
