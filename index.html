@@ -85,6 +85,456 @@ h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
   font-weight:600;
   font-size:13px;
   cursor:pointer;
+  transition:all 0.18s ease;
+  box-shadow:0 8px 18px rgba(91,76,226,0.25);
+}
+
+.login-box button.pressed{
+  transform:scale(0.94);
+  box-shadow:0 4px 10px rgba(91,76,226,0.35) inset;
+}
+
+.login-box button.loading{
+  pointer-events:none;
+  opacity:0.8;
+}
+
+.login-card.shake{
+  animation:shake 0.35s ease;
+}
+
+@keyframes shake{
+  0%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+  100%{transform:translateX(0)}
+}
+
+.greeting{
+  text-align:center;
+  font-weight:800;
+  padding:22px;
+  font-size:26px;
+  color:var(--primary);
+  letter-spacing:0.3px;
+}
+
+.week-nav{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+  padding:18px;
+  margin:0 20px 10px 20px;
+  background:#fff;
+  border-radius:20px;
+  border:1px solid var(--border);
+  box-shadow:0 15px 40px rgba(0,0,0,0.05);
+}
+
+.nav-btn{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:#fff;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  transition:all 0.2s ease;
+  box-shadow:0 6px 14px rgba(0,0,0,0.08);
+}
+
+.nav-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(0,0,0,0.12);
+}
+
+.nav-btn:active{
+  transform:translateY(1px) scale(0.96);
+  box-shadow:0 3px 8px rgba(0,0,0,0.15) inset;
+}
+
+.week-title{
+  font-weight:600;
+}
+
+.calendar{
+  padding:20px;
+  max-width:1200px;
+  margin:auto;
+}
+
+.calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:16px;
+}
+
+.day{
+  background:var(--card);
+  border-radius:20px;
+  border:1px solid var(--border);
+  min-height:140px;
+  padding:16px;
+  position:relative;
+  cursor:pointer;
+  transition:all 0.25s ease;
+  box-shadow:0 20px 45px rgba(0,0,0,0.05),
+             0 5px 12px rgba(0,0,0,0.03);
+}
+
+.day:hover{
+  transform:translateY(-3px);
+  box-shadow:0 30px 60px rgba(0,0,0,0.08),
+             0 8px 18px rgba(0,0,0,0.05);
+}
+
+.day-header{
+  font-size:13px;
+  font-weight:600;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+
+.day-number{
+  font-weight:700;
+  font-size:15px;
+}
+
+.today{
+  border:2px solid var(--primary);
+}
+
+.activity{
+  font-size:12px;
+  margin-top:6px;
+  padding:6px 8px;
+  border-radius:12px;
+  background:#f1f5ff;
+}
+
+.popup-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+
+.popup{
+  background:#fff;
+  padding:28px;
+  border-radius:22px;
+  width:92%;
+  max-width:420px;
+  box-shadow:0 40px 80px rgba(0,0,0,0.25),
+             0 15px 30px rgba(0,0,0,0.15);
+  animation:fadeInScale 0.25s ease;
+}
+
+@keyframes fadeInScale{
+  from{opacity:0;transform:scale(0.95)}
+  to{opacity:1;transform:scale(1)}
+}
+
+@media(max-width:900px){
+  .calendar-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:600px){
+  .calendar{
+    padding:24px 20px 40px 20px;
+  }
+
+  .calendar-grid{
+    grid-template-columns:1fr;
+    max-width:420px;
+    margin:0 auto;
+    gap:20px;
+  }
+
+  .week-nav{
+    margin:0 24px 14px 24px;
+  }
+
+  .day{
+    min-height:160px;
+    padding:20px;
+  }
+}
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Logo">
+  <h1>יומן פעילות</h1>
+</header>
+
+<div class="login-wrapper" id="loginSection">
+  <div class="login-card">
+    <div class="login-box">
+      <input id="empID" type="password" placeholder="מספר עובד" inputmode="numeric" autocomplete="off">
+      <input id="code" type="password" placeholder="קוד אישי" inputmode="numeric" autocomplete="off">
+      <button id="loginBtn" onclick="login()">כניסה</button>
+    </div>
+  </div>
+</div>
+
+<div id="appSection" style="display:none;">
+  <div class="greeting" id="greeting"></div>
+  <div class="week-nav">
+    <button class="nav-btn" onclick="prevWeek()">‹</button>
+    <div class="week-title" id="weekTitle"></div>
+    <button class="nav-btn" onclick="nextWeek()">›</button>
+  </div>
+  <div class="calendar">
+    <div id="weekView" class="calendar-grid"></div>
+  </div>
+</div>
+
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup(event)">
+  <div class="popup" id="popupContent"></div>
+</div>
+
+<script>
+
+const EXCEL_FILE = "InstructorData.xlsx";
+let rawData = [];
+let currentEmployeeName = null;
+let currentWeekStart = getStartOfWeek(new Date());
+
+// ===== Program Fixed Colors =====
+const programColors = {
+  "Biomimicry - Middle School": "#F0FFFF",
+  "Green Leadership": "#FFFDD0",
+  "Space Technologies": "#E2F9E1",
+  "Biomimicry": "#F0F5F1",
+  "Artificial Intelligence": "#FDF2F2",
+  "Rokechim Olam": "#F0F8FF",
+  "Sky Is Not The Limit": "#F5F5F5",
+  "Porotzot Derech": "#FFF0F5",
+  "AI Applications": "#FFF5EE",
+  "Premium": "#FEF9E7"
+};
+
+// ===== Holidays =====
+const holidays = {
+  "03/03/2026": "פורים",
+  "04/03/2026": "פורים",
+  "24/03/2026": "פסח",
+  "25/03/2026": "פסח",
+  "26/03/2026": "פסח",
+  "27/03/2026": "פסח",
+  "28/03/2026": "פסח",
+  "29/03/2026": "פסח",
+  "30/03/2026": "פסח",
+  "31/03/2026": "פסח",
+  "01/04/2026": "פסח",
+  "02/04/2026": "פסח",
+  "03/04/2026": "פסח",
+  "04/04/2026": "פסח",
+  "05/04/2026": "פסח",
+  "06/04/2026": "פסח",
+  "07/04/2026": "פסח",
+  "08/04/2026": "פסח",
+  "20/04/2026": "ערב יום הזיכרון",
+  "21/04/2026": "יום הזיכרון",
+  "22/04/2026": "יום העצמאות",
+  "08/05/2026": "ל״ג בעומר",
+  "21/05/2026": "שבועות",
+  "22/05/2026": "שבועות"
+};
+
+function getStartOfWeek(date){
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  return new Date(d.setDate(diff));
+}
+
+async function loadExcel(){
+  const res = await fetch(EXCEL_FILE + "?t=" + Date.now());
+  const data = await res.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  rawData = XLSX.utils.sheet_to_json(sheet, { raw: true });
+}
+
+function login(){
+  const btn = document.getElementById("loginBtn");
+  const card = document.querySelector('.login-card');
+
+  btn.classList.add('pressed','loading');
+  btn.innerText = "טוען...";
+
+  setTimeout(()=>{
+    const empID = document.getElementById("empID").value;
+    const code = document.getElementById("code").value;
+
+    const match = rawData.find(r => String(r.EmployeeID) === empID && String(r.Code) === code);
+
+    if(!match){
+      btn.classList.remove('pressed','loading');
+      btn.innerText = "כניסה";
+      card.classList.add('shake');
+      setTimeout(()=>card.classList.remove('shake'),400);
+      return;
+    }
+
+    currentEmployeeName = match.Employee;
+    document.getElementById("greeting").innerText = "שלום " + currentEmployeeName;
+
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("appSection").style.display = "block";
+
+    btn.classList.remove('pressed','loading');
+    btn.innerText = "כניסה";
+
+    renderWeek();
+  },500);
+}
+
+function renderWeek(){
+  const container = document.getElementById('weekView');
+  const title = document.getElementById('weekTitle');
+  container.innerHTML='';
+
+  const start = new Date(currentWeekStart);
+  const end = new Date(start);
+  end.setDate(start.getDate()+6);
+  title.innerText = start.toLocaleDateString('he-IL') + " - " + end.toLocaleDateString('he-IL');
+
+  const today = new Date();
+
+  for(let i=0;i<7;i++){
+    const dayDate = new Date(start);
+    dayDate.setDate(start.getDate()+i);
+
+    const div = document.createElement('div');
+    div.className='day';
+    if(dayDate.toDateString()===today.toDateString()) div.classList.add('today');
+
+    const dateKey = dayDate.toLocaleDateString('en-GB');
+    const holidayName = holidays[dateKey];
+
+    if(holidayName){
+      div.style.background = '#fff7ed';
+      div.style.border = '2px solid #f59e0b';
+    }
+
+    div.innerHTML = `
+      <div class="day-header">${dayDate.toLocaleDateString('he-IL',{weekday:'long'})}</div>
+      <div class="day-number">${dayDate.getDate()}</div>
+      ${holidayName ? `<div style="margin-top:6px;font-size:12px;font-weight:700;color:#b45309">${holidayName}</div>` : ''}
+    `;
+
+    container.appendChild(div);
+  }
+}
+
+function prevWeek(){
+  currentWeekStart.setDate(currentWeekStart.getDate()-7);
+  renderWeek();
+}
+
+function nextWeek(){
+  currentWeekStart.setDate(currentWeekStart.getDate()+7);
+  renderWeek();
+}
+
+window.addEventListener('load', async ()=>{
+  await loadExcel();
+
+  // Enter key login support
+  const empInput = document.getElementById('empID');
+  const codeInput = document.getElementById('code');
+
+  function handleEnter(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('pressed');
+      setTimeout(()=>btn.classList.remove('pressed'),150);
+      login();
+    }
+  }
+  }
+
+  empInput.addEventListener('keydown', handleEnter);
+  codeInput.addEventListener('keydown', handleEnter);
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+
+</script>
+
+</body>
+</html>
+  position:relative;
+  z-index:10;
+}
+
+header img{height:48px;margin-bottom:8px}
+
+h1{margin:0;font-size:16px;font-weight:600;letter-spacing:0.5px}
+
+.login-wrapper{
+  min-height:80vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.login-card{
+  width:100%;
+  max-width:320px;
+  background:var(--card);
+  padding:36px 28px;
+  border-radius:22px;
+  border:1px solid var(--border);
+  box-shadow:0 30px 70px rgba(0,0,0,0.08),
+             0 8px 20px rgba(0,0,0,0.05);
+  backdrop-filter:blur(6px);
+}
+
+.login-box{display:flex;flex-direction:column;gap:16px}
+
+.login-box input{
+  height:64px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  text-align:center;
+  font-size:16px;
+  font-weight:600;
+  background:#fafbff;
+}
+
+.login-box button{
+  height:36px;
+  width:120px;
+  align-self:center;
+  border-radius:999px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+  font-size:13px;
+  cursor:pointer;
 }
 
 .greeting{
