@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>יומן פעילות</title>
+
+<!-- PWA Enabled (NO DATA STORAGE) -->
+<meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root{
+  --bg:#f6f9fc;
+  --border:#e5e7eb;
+  --primary:#4f46e5;
+  --primary-glow:rgba(79,70,229,0.25);
+  --text:#0f172a;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+header{
+  background:#fff;
+  padding:20px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+
+.login-wrapper{
+  display:flex;
+  justify-content:center;
+  padding:30px 16px;
+}
+
+.login-card{
+  width:100%;
+  max-width:320px;
+  background:#fff;
+  padding:30px;
+  border-radius:18px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 50px rgba(0,0,0,0.05);
+}
+
+.login-box{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+input{
+  height:60px;
+  padding:0 16px;
+  font-size:16px;
+  border-radius:12px;
+  border:1px solid var(--border);
+}
+
+button{
+  height:42px;
+  border:none;
+  border-radius:999px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+  padding:0 18px;
+  width:120px;
+  align-self:center;
+  font-size:14px;
+  box-shadow:0 6px 14px rgba(79,70,229,0.25);
+}
+
+button:active{
+  transform:scale(0.96);
+}
+
+.week-nav{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 16px;
+  background:#fff;
+  border-bottom:1px solid var(--border);
+}
+
+.week-grid{
+  padding:16px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+}
+
+.day{
+  background:#fff;
+  padding:16px;
+  border-radius:16px;
+  border:1px solid var(--border);
+}
+
+.today{
+  border:2px solid var(--primary);
+  box-shadow:0 0 0 4px var(--primary-glow);
+}
+
+.global-fixed-banner{
+  background:#dc2626;
+  color:#fff;
+  padding:16px;
+  text-align:center;
+  font-weight:600;
+}
+
+.global-fixed-banner a{
+  display:inline-block;
+  margin-top:10px;
+  background:#fff;
+  color:#dc2626;
+  padding:8px 14px;
+  border-radius:10px;
+  text-decoration:none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Logo" style="height:48px; margin-bottom:10px;">
+  <h1>יומן פעילות</h1>
+</header>
+
+<div class="login-wrapper" id="loginSection">
+  <div class="login-card">
+    <div class="login-box">
+      <input id="empID" placeholder="מספר עובד">
+      <input id="code" placeholder="קוד אישי">
+      <button onclick="login()">יומן פעילות</button>
+    </div>
+  </div>
+</div>
+
+<div id="appSection" style="display:none;">
+  <div class="week-nav">
+    <button onclick="prevWeek()">◀ שבוע קודם</button>
+    <div id="weekTitle"></div>
+    <button onclick="nextWeek()">שבוע הבא ▶</button>
+  </div>
+  <div id="weekView" class="week-grid"></div>
+</div>
+
+<script>
+
+function getStartOfWeek(date){
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  d.setDate(diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+let currentWeekStart = getStartOfWeek(new Date());
+
+function login(){
+  document.getElementById('loginSection').style.display='none';
+  document.getElementById('appSection').style.display='block';
+  renderWeek();
+}
+
+function renderWeek(){
+  const container = document.getElementById('weekView');
+  const title = document.getElementById('weekTitle');
+  container.innerHTML='';
+
+  const start = new Date(currentWeekStart);
+  const end = new Date(start);
+  end.setDate(start.getDate()+6);
+
+  title.innerText = start.toLocaleDateString('he-IL') + ' - ' + end.toLocaleDateString('he-IL');
+
+  const today = new Date();
+
+  for(let i=0;i<7;i++){
+    const dayDate = new Date(start);
+    dayDate.setDate(start.getDate()+i);
+
+    const div = document.createElement('div');
+    div.className='day';
+
+    if(dayDate.toDateString()===today.toDateString()){
+      div.classList.add('today');
+    }
+
+    div.innerHTML = `<strong>${dayDate.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'numeric'})}</strong>`;
+    container.appendChild(div);
+  }
+}
+
+function prevWeek(){
+  currentWeekStart.setDate(currentWeekStart.getDate()-7);
+  renderWeek();
+}
+
+function nextWeek(){
+  currentWeekStart.setDate(currentWeekStart.getDate()+7);
+  renderWeek();
+}
+
+function renderFixedMonthlyMessage(){
+  const today = new Date();
+  const day = today.getDate();
+  const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+
+  if(day>=25 && day<=lastDay){
+    const banner = document.createElement('div');
+    banner.className='global-fixed-banner';
+    banner.innerHTML='יש להשלים דיווח שעות וללחוץ על "סיום דיווח" עם סיום הפעולה.<br><a href="https://taasiyeda2026.github.io/attendance/" target="_blank">מעבר למערכת הנוכחות</a>';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+}
+
+window.addEventListener('load',()=>{
+  renderFixedMonthlyMessage();
+});
+
+/* Service Worker Registration (NO DATA CACHE) */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+
+</script>
+
+</body>
+</html>
