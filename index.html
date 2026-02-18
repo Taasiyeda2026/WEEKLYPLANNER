@@ -32,6 +32,10 @@ header{
   padding:24px 16px;
   text-align:center;
   border-bottom:1px solid var(--border);
+  box-shadow:0 10px 30px rgba(0,0,0,0.04),
+             0 2px 6px rgba(0,0,0,0.03);
+  position:relative;
+  z-index:10;
 }
 
 header img{height:48px;margin-bottom:8px}
@@ -53,7 +57,9 @@ h1{margin:0;font-size:22px;font-weight:700}
   padding:36px 28px;
   border-radius:22px;
   border:1px solid var(--border);
-  box-shadow:0 25px 60px rgba(0,0,0,0.05);
+  box-shadow:0 30px 70px rgba(0,0,0,0.08),
+             0 8px 20px rgba(0,0,0,0.05);
+  backdrop-filter:blur(6px);
 }
 
 .login-box{display:flex;flex-direction:column;gap:16px}
@@ -83,8 +89,10 @@ h1{margin:0;font-size:22px;font-weight:700}
 
 .greeting{
   text-align:center;
-  font-weight:600;
+  font-weight:700;
   padding:18px;
+  font-size:18px;
+  color:var(--primary);
 }
 
 .week-nav{
@@ -92,7 +100,12 @@ h1{margin:0;font-size:22px;font-weight:700}
   justify-content:center;
   align-items:center;
   gap:18px;
-  padding:14px;
+  padding:18px;
+  margin:0 20px 10px 20px;
+  background:#fff;
+  border-radius:20px;
+  border:1px solid var(--border);
+  box-shadow:0 15px 40px rgba(0,0,0,0.05);
 }
 
 .nav-btn{
@@ -125,13 +138,19 @@ h1{margin:0;font-size:22px;font-weight:700}
   border-radius:20px;
   border:1px solid var(--border);
   min-height:140px;
-  padding:14px;
+  padding:16px;
   position:relative;
   cursor:pointer;
-  transition:0.2s;
+  transition:all 0.25s ease;
+  box-shadow:0 20px 45px rgba(0,0,0,0.05),
+             0 5px 12px rgba(0,0,0,0.03);
 }
 
-.day:hover{box-shadow:0 10px 25px rgba(0,0,0,0.05)}
+.day:hover{
+  transform:translateY(-3px);
+  box-shadow:0 30px 60px rgba(0,0,0,0.08),
+             0 8px 18px rgba(0,0,0,0.05);
+}
 
 .day-header{
   font-size:13px;
@@ -169,11 +188,18 @@ h1{margin:0;font-size:22px;font-weight:700}
 
 .popup{
   background:#fff;
-  padding:26px;
+  padding:28px;
   border-radius:22px;
   width:92%;
   max-width:420px;
-  box-shadow:0 25px 60px rgba(0,0,0,0.2);
+  box-shadow:0 40px 80px rgba(0,0,0,0.25),
+             0 15px 30px rgba(0,0,0,0.15);
+  animation:fadeInScale 0.25s ease;
+}
+
+@keyframes fadeInScale{
+  from{opacity:0;transform:scale(0.95)}
+  to{opacity:1;transform:scale(1)}
 }
 
 @media(max-width:900px){
@@ -206,9 +232,9 @@ h1{margin:0;font-size:22px;font-weight:700}
 <div id="appSection" style="display:none;">
   <div class="greeting" id="greeting"></div>
   <div class="week-nav">
-    <button class="nav-btn" onclick="prevWeek()">›</button>
+    <button class="nav-btn" onclick="prevWeek()">‹</button>
     <div class="week-title" id="weekTitle"></div>
-    <button class="nav-btn" onclick="nextWeek()">‹</button>
+    <button class="nav-btn" onclick="nextWeek()">›</button>
   </div>
   <div class="calendar">
     <div id="weekView" class="calendar-grid"></div>
@@ -237,6 +263,7 @@ const programColors = {
   "Premium": "#FEF9E7"
 };
 let rawData = [];
+let programRules = {}; // Program -> { meetingNumber: "Reminder text" }
 let currentEmployeeName = "";
 let currentWeekStart = getStartOfWeek(new Date());
 
@@ -259,7 +286,7 @@ async function login(){
     return;
   }
 
-  currentEmployeeName = employeeRows[0]["EmployeeName"];
+  currentEmployeeName = employeeRows[0]["Employee"];
   document.getElementById('greeting').innerText = "שלום " + currentEmployeeName;
   document.getElementById('loginSection').style.display='none';
   document.getElementById('appSection').style.display='block';
@@ -272,6 +299,16 @@ async function loadExcel(){
   const workbook = XLSX.read(data, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   rawData = XLSX.utils.sheet_to_json(sheet);
+
+  // Example hardcoded rules (can be replaced by ProgramRules.xlsx later)
+  programRules = {
+    "Biomimicry": {
+      7: "מפגש 7 – לוודא היערכות למפגש הבא (ציוד ודגם AI/פיזי)"
+    },
+    "Biomimicry - Middle School": {
+      7: "מפגש 7 – בדיקת סטטוס הכנת דגמים"
+    }
+  };
 }
 
 function renderWeek(){
@@ -299,10 +336,34 @@ function renderWeek(){
       <div class="day-number">${dayDate.getDate()}</div>
     `;
 
-    const activities = rawData.filter(r => 
-      r["EmployeeName"] === currentEmployeeName &&
-      new Date(r["Date"]).toDateString() === dayDate.toDateString()
-    );
+    // Collect activities from Date1-Date16 excluding Cancel1-Cancel16
+    const activities = [];
+
+    rawData.forEach(r=>{
+      if(r["Employee"] !== currentEmployeeName) return;
+
+      for(let i=1;i<=16;i++){
+        const dateField = r["Date"+i];
+        const cancelField = r["Cancel"+i];
+
+        if(!dateField) continue;
+        if(cancelField && new Date(cancelField).toDateString() === new Date(dateField).toDateString()) continue;
+
+        const activityDate = new Date(dateField);
+        if(activityDate.toDateString() === dayDate.toDateString()){
+          activities.push({
+            Program: r["Program"],
+            StartTime: r["StartTime"],
+            EndTime: r["EndTime"],
+            Manager: r["Manager"],
+            School: r["School"],
+            Class: r["Class"],
+            Authority: r["Authority"],
+            MeetingNumber: i
+          });
+        }
+      }
+    });
 
     activities.forEach(act=>{
       const item = document.createElement('div');
@@ -322,12 +383,31 @@ function openPopup(date, activities){
   const overlay = document.getElementById('popupOverlay');
   const content = document.getElementById('popupContent');
 
-  let html = `<h3>${date.toLocaleDateString('he-IL')}</h3>`;
+  let html = `<h3 style="margin-top:0">${date.toLocaleDateString('he-IL')}</h3>`;
+
   if(activities.length === 0){
     html += "<p>אין פעילות מתוכננת</p>";
   } else {
     activities.forEach(act=>{
-      html += `<p><strong>${act["Program"]}</strong><br>${act["StartTime"]} - ${act["EndTime"]}</p>`;
+      const color = programColors[act.Program] || '#f1f5ff';
+
+      let reminderHtml = "";
+      const nextMeeting = act.MeetingNumber + 1;
+      if(programRules[act.Program] && programRules[act.Program][nextMeeting]){
+        reminderHtml = `<div style="margin-top:8px;padding:8px;border-radius:12px;background:#fff3cd;font-size:12px"><strong>תזכורת למפגש הבא (${nextMeeting}):</strong><br>${programRules[act.Program][nextMeeting]}</div>`;
+      }
+
+      html += `
+        <div style="border:1px solid #e6e8ef;border-radius:16px;padding:14px;margin-bottom:14px;background:${color}">
+          <div style="font-weight:700;margin-bottom:6px">${act.Program}</div>
+          <div><strong>בית ספר:</strong> ${act.School}</div>
+          <div><strong>רשות:</strong> ${act.Authority || ''}</div>
+          <div><strong>כיתה:</strong> ${act.Class || ''}</div>
+          <div><strong>שעות:</strong> ${act.StartTime} - ${act.EndTime}</div>
+          <div><strong>מספר מפגש:</strong> ${act.MeetingNumber}</div>
+          ${reminderHtml}
+        </div>
+      `;
     });
   }
 
