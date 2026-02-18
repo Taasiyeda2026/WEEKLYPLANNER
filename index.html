@@ -449,6 +449,9 @@ async function login(){
   btn.innerText = "טוען...";
 
   const hashedCode = await sha256(code);
+  console.log('[Login] empID:', empID, '| hashedCode:', hashedCode);
+  const firstRow = rawData[0];
+  if(firstRow) console.log('[Login] Sample row - EmployeeID:', firstRow.EmployeeID, '| Code:', String(firstRow.Code).slice(0,20)+'...');
   const match = rawData.find(r => String(r.EmployeeID) === empID && r.Code === hashedCode);
 
   if(!match){
