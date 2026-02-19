@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>חלוקת צוותים | קורס יזמות פרימיום</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+body{
+    margin:0;
+    font-family:'Rubik',sans-serif;
+    direction:rtl;
+    background:linear-gradient(135deg,#0f172a,#1e293b);
+}
+
+.wrapper{
+    max-width:900px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    border-radius:18px;
+    padding:50px;
+    box-shadow:0 30px 70px rgba(0,0,0,0.25);
+}
+
+.section{ display:none; }
+.section.active{ display:block; }
+
+h1{ margin-top:0; }
+
+button{
+    margin-top:25px;
+    padding:14px 24px;
+    border:none;
+    border-radius:10px;
+    background:#0f172a;
+    color:white;
+    font-weight:600;
+    cursor:pointer;
+}
+
+button:hover{ background:#1e293b; }
+
+.option{ margin-bottom:10px; display:flex; gap:8px; }
+
+.error{
+    color:#b91c1c;
+    font-size:13px;
+    display:none;
+}
+
+.success{
+    display:none;
+    margin-top:20px;
+    padding:15px;
+    background:#ecfdf5;
+    color:#065f46;
+    border-radius:8px;
+}
+
+input[type="text"]{
+    width:100%;
+    padding:10px;
+    border-radius:6px;
+    border:1px solid #d1d5db;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+<div class="card">
+
+<!-- שלב 1 -->
+<div class="section active" id="intro">
+<h1>חלוקת צוותי מיזם</h1>
+<p>
+כדי לבנות צוותים עסקיים חזקים ומגוונים,
+אנא מלאו את השאלון הבא.
+</p>
+<button onclick="next('roles')">המשך</button>
+</div>
+
+<!-- שלב 2 -->
+<div class="section" id="roles">
+<h2>בחרו לפחות שני תפקידים:</h2>
+
+<div class="option"><input type="checkbox" name="role" value="אסטרטגיה">אסטרטגיה</div>
+<div class="option"><input type="checkbox" name="role" value="חקר">חקר</div>
+<div class="option"><input type="checkbox" name="role" value="מוצר">מוצר</div>
+<div class="option"><input type="checkbox" name="role" value="תקשורת">תקשורת</div>
+
+<div class="error" id="roleError">יש לבחור לפחות שני תפקידים</div>
+
+<button onclick="validateRoles()">המשך לשאלון</button>
+</div>
+
+<!-- שלב 3 -->
+<div class="section" id="survey">
+<h2>שאלון התאמה</h2>
+
+<form id="teamForm"
+action="YOUR_GOOGLE_FORM_ACTION_URL"
+method="POST"
+target="hidden_iframe"
+onsubmit="submitted=true;">
+
+<p>שם מלא:</p>
+<input type="text" name="entry.XXXXXX" required>
+
+<p>אני עומד בלוחות זמנים:</p>
+<input type="radio" name="entry.XXXXXX" value="1" required>1
+<input type="radio" name="entry.XXXXXX" value="2">2
+<input type="radio" name="entry.XXXXXX" value="3">3
+<input type="radio" name="entry.XXXXXX" value="4">4
+<input type="radio" name="entry.XXXXXX" value="5">5
+
+<p>אני מקשיב לאחרים גם כשאני לא מסכים:</p>
+<input type="radio" name="entry.XXXXXX" value="1" required>1
+<input type="radio" name="entry.XXXXXX" value="2">2
+<input type="radio" name="entry.XXXXXX" value="3">3
+<input type="radio" name="entry.XXXXXX" value="4">4
+<input type="radio" name="entry.XXXXXX" value="5">5
+
+<button type="submit">שליחה</button>
+</form>
+
+<div class="success" id="successMsg">
+המידע נקלט בהצלחה. תודה.
+</div>
+
+</div>
+
+</div>
+</div>
+
+<iframe name="hidden_iframe" style="display:none;"></iframe>
+
+<script>
+function next(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function validateRoles(){
+    let selected = document.querySelectorAll('input[name="role"]:checked');
+    if(selected.length < 2){
+        document.getElementById("roleError").style.display="block";
+    } else {
+        document.getElementById("roleError").style.display="none";
+        next('survey');
+    }
+}
+
+let submitted = false;
+document.getElementById("teamForm").addEventListener("submit", function(){
+    document.getElementById("successMsg").style.display="block";
+});
+</script>
+
+</body>
+</html>
